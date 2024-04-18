@@ -101,7 +101,7 @@ bool isEmpty(LinkedList* ll)
 void printLinkedList(LinkedList* ll)
 {
 	Node* cn = ll->head;
-	while(cn->next != NULL)
+	while(cn != NULL)
 	{
 		printf("%d ", cn->val);
 		cn = cn->next;
@@ -221,22 +221,53 @@ int pop(Stack* st)
 	return val;
 }
 
+typedef struct
+{
+	LinkedList ll;
+} Queue;
+
+Queue createQueue()
+{
+	Queue q;
+	q.ll = createLinkedList();
+	return q;
+}
+
+void offer(Queue* q, int val)
+{
+	addNode(&q->ll, val);
+}
+
+int peekQueue(Queue* q)
+{
+	return q->ll.head->val;
+}
+
+int poll(Queue* q)
+{
+	int val = q->ll.head->val;
+	deleteNode(&q->ll, 0);
+	return val;
+}
+
 int main()
 {
 	ArrayList list = createArrayList();
 	LinkedList ll = createLinkedList();
 	Stack st = createStack();
+	Queue q = createQueue();
 
-	for(int i = 0; i < ARRAY_SIZE; i++)
+	for(int i = 0; i < 10000; i++)
 	{
 		add(&list, i);
 		addNode(&ll, i);
 		push(&st, i);
+		offer(&q, i);
 	}
 
 	deleteArrayList(&list);
 	deleteLinkedList(&ll);
 	deleteLinkedList(&st.ll);
-	
+	deleteLinkedList(&q.ll);	
 	return 0;
 }
