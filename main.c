@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include<stdbool.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 const int ARRAY_SIZE = 10;
@@ -250,24 +250,178 @@ int poll(Queue* q)
 	return val;
 }
 
-int main()
+typedef struct tree_node
 {
-	ArrayList list = createArrayList();
-	LinkedList ll = createLinkedList();
-	Stack st = createStack();
-	Queue q = createQueue();
+	int val;
+	struct tree_node* left;
+	struct tree_node* right;
+	int height;
+} TreeNode;
 
-	for(int i = 0; i < 10000; i++)
+typedef struct
+{
+	TreeNode* root;
+} BST;
+
+BST createTree()
+{
+	BST tree;
+	tree.root = NULL;
+	return tree;
+}
+
+TreeNode* addTreeNode(TreeNode* root, int val)
+{
+	// base case, the tree is empty
+	if(root == NULL)
 	{
-		add(&list, i);
-		addNode(&ll, i);
-		push(&st, i);
-		offer(&q, i);
+		root = malloc(sizeof(TreeNode));
+		root->left = NULL;
+		root->right = NULL;
+
+		root->height = 0;
+		root->val = val;
+		
+		return root;
 	}
 
-	deleteArrayList(&list);
-	deleteLinkedList(&ll);
-	deleteLinkedList(&st.ll);
-	deleteLinkedList(&q.ll);	
+	// recursivley find the correct pos of the passed value
+	if(root->val < val)
+	{
+		root->right = addTreeNode(root->right, val);
+	}
+
+	else if(root->val > val)
+	{
+		root->left = addTreeNode(root->left, val);
+	}
+
+	else
+	{
+		printf("CANNOT ADD TWO ELEMENTS WITH THE SAME VALUE \n");
+		exit(1);
+	}
+
+	return root;
+}
+
+TreeNode* sucessor(TreeNode* root)
+{
+	TreeNode* tn = root->right;
+
+	while(tn->left != NULL)
+	{
+		tn = tn->left;
+	}
+
+	return tn;
+}
+
+TreeNode* deleteTreeNode(TreeNode* root, int val)
+{
+	// the value does not exist in the tree
+	if(root == NULL)
+	{
+		printf("THE VALUE TO BE DELETED IS NOT IN THE TREE \n");
+		exit(1);
+	}
+
+	if(root->val > val)
+	{
+		root->left = deleteTreeNode(root->left, val);
+	}
+
+	else if(root->val < val)
+	{
+		root->right = deleteTreeNode(root->right, val);
+	}
+
+	// found the node to delete
+	else
+	{
+		// case 1: the node has only one or no children
+		if(root->right == NULL && root->left == NULL)
+		{
+			free(root);
+			return NULL;
+		}
+
+		// only right child
+		else if(root->left == NULL && root->right != NULL)
+		{
+			TreeNode* tn = root->right;
+			free(root);
+			return tn;
+		}
+
+		// only left child
+		else if(root->left != NULL && root->right == NULL)
+		{
+			TreeNode* tn = root->left;
+			free(root);
+			return tn;
+		}
+
+		else
+		{
+			// if the node has 2 children, return the smallest node in the right suBSTree
+			TreeNode* tn = sucessor(root);
+
+			// replace delNodes value
+			root->val = tn->val;
+
+			// delete duplicate
+			root->right = deleteTreeNode(root->right, tn->val);
+		}
+	}
+
+	return root;
+}
+
+void printBST(TreeNode* root)
+{
+	if(root == NULL)
+	{
+		return;
+	}
+
+	printBST(root->left);
+	printf("%d ", root->val);
+	printBST(root->right);
+}
+
+void deleteBST(BST* BST)
+{
+	while(BST->root != NULL)
+	{
+		BST->root = deleteTreeNode(BST->root, BST->root->val);
+	}
+}
+
+int main()
+{
+	// ArrayList list = createArrayList();
+	// LinkedList ll = createLinkedList();
+	// Stack st = createStack();
+	// Queue q = createQueue();
+	BST BST = createTree();
+
+	int arr[] = {4, 2, 6, 1, 3, 5, 7};
+
+	for(int i = 0; i < (sizeof(arr) / sizeof(arr[0])); i++)
+	{
+		// add(&list, i);
+		// addNode(&ll, i);
+		// push(&st, i);
+		// offer(&q, i);
+		BST.root = addTreeNode(BST.root, arr[i]);
+	}
+
+	printBST(BST.root);
+	// deleteArrayList(&list);
+	// deleteLinkedList(&ll);
+	// deleteLinkedList(&st.ll);
+	// deleteLinkedList(&q.ll);	
+	deleteBST(&BST); 
 	return 0;
 }
