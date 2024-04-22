@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
 #define CAP 10
 
 typedef struct
@@ -263,18 +264,144 @@ typedef struct tree_node
 typedef struct
 {
 	TreeNode* root;
-} BST;
+} AVLTree;
 
-BST createTree()
+AVLTree createTree()
 {
-	BST tree;
+	AVLTree tree;
 	tree.root = NULL;
 	return tree;
 }
 
+int height(TreeNode* node)
+{
+	return node == NULL ? -1 : node->height;
+}
+
+// case 1 in balance function
+TreeNode* rotateRight(TreeNode* a)
+{		
+	TreeNode* b = a->left;
+
+	// whatevers on the right of b put it on the left of a as b is smaller than a
+	a->left = b->right;
+
+	// make b become parent of a
+	b->right = a;
+
+	// get the new, updated heights
+	a->height = height(a->right) > height(a->left) ? height(a->right) + 1 : height(a->left) + 1;
+
+	// use a bc a is now right child of b
+	b->height = height(b->left) > height(a) ? height(b->left) + 1 : height(a) + 1;
+
+	// b is the new head
+	return b;
+}
+
+// case 3 in balance function
+TreeNode* rotateLeft(TreeNode* a)
+{
+	TreeNode* b = a->right;
+	
+	// save the content from b left
+	a->right = b->left;
+
+	// make b the parent
+	b->left = a;
+
+	// update the height
+	a->height = (height(a->left) > height(a->right)) ? height(a->left) + 1: height(a->right) + 1;
+
+	b->height = (height(a) > height(b->right)) ? height(a) + 1 : height(b->right) + 1;
+
+	return b;
+}
+
+TreeNode* doubleRotateRight(TreeNode* a)
+{
+	a->right = rotateRight(a->right);
+	return rotateLeft(a);
+}
+
+// case 2 in balance function
+TreeNode* doubleRotateLeft(TreeNode* a)
+{
+	a->left = rotateLeft(a->left);
+	return rotateRight(a);
+}
+
+// need to check if the left and right subtrees are balanced (difference in height is <= 1)
+TreeNode* balance(TreeNode* node)
+{
+	if(height(node->left) - height(node->right) > 1)
+	{
+		// case one, left tree is taller than right tree
+		if(height(node->left->left) >= height(node->left->right))
+		{
+			/*
+				case 1: long left node
+					 a            b
+					/            / \
+				   b   -->      c   a
+	              /
+				 c
+			*/
+			node = rotateRight(node);
+		}
+
+		// case 2: double left
+		else
+		{
+			/*
+				case 2: double left
+				  a              a             c
+				 /              /             / \  
+				b     -->      c      -->    b   a
+				 \            /                 
+				  c          b                 
+			*/
+			node = doubleRotateLeft(node);
+		}
+	}
+
+	if(height(node->right) - height(node->left) > 1)
+	{
+		//case 3: long right node
+		if(height(node->right->right) >= height(node->right->left))
+		{
+			/*
+				   a               b
+					\             / \
+                     b    -->    a   c
+					  \
+					   c
+			*/
+			node = rotateLeft(node);
+		}
+		
+		// case 4: double rotate left
+		else
+		{
+			/*
+				a               a              c
+				 \               \            / \  
+				  b  -->          c   -->    b   a
+				 /                 \           
+				 c                  b        
+			*/
+			node = doubleRotateLeft(node);
+		}
+	}
+
+	// update root height
+	node->height = (height(node->left) > height(node->right)) ? height(node->left) + 1: height(node->right) + 1;
+	return node;
+}
+
 TreeNode* addTreeNode(TreeNode* root, int val)
 {
-	// base case, the tree is empty
+	// base case, finding position of new node or tree is empty
 	if(root == NULL)
 	{
 		root = malloc(sizeof(TreeNode));
@@ -283,7 +410,6 @@ TreeNode* addTreeNode(TreeNode* root, int val)
 
 		root->height = 0;
 		root->val = val;
-		
 		return root;
 	}
 
@@ -297,14 +423,7 @@ TreeNode* addTreeNode(TreeNode* root, int val)
 	{
 		root->left = addTreeNode(root->left, val);
 	}
-
-	else
-	{
-		printf("CANNOT ADD TWO ELEMENTS WITH THE SAME VALUE \n");
-		exit(1);
-	}
-
-	return root;
+	return balance(root);
 }
 
 TreeNode* sucessor(TreeNode* root)
@@ -366,7 +485,7 @@ TreeNode* deleteTreeNode(TreeNode* root, int val)
 
 		else
 		{
-			// if the node has 2 children, return the smallest node in the right suBSTree
+			// if the node has 2 children, return the smallest node in the right suAVLTreeree
 			TreeNode* tn = sucessor(root);
 
 			// replace delNodes value
@@ -377,26 +496,26 @@ TreeNode* deleteTreeNode(TreeNode* root, int val)
 		}
 	}
 
-	return root;
+	return balance(root);
 }
 
-void printBST(TreeNode* root)
+void printAVLTree(TreeNode* root)
 {
 	if(root == NULL)
 	{
 		return;
 	}
 
-	printBST(root->left);
-	printf("%d ", root->val);
-	printBST(root->right);
+	printAVLTree(root->left);
+	printf("%d  height: %d\n", root->val, root->height);
+	printAVLTree(root->right);
 }
 
-void deleteBST(BST* BST)
+void deleteAVLTree(AVLTree* AVLTree)
 {
-	while(BST->root != NULL)
+	while(AVLTree->root != NULL)
 	{
-		BST->root = deleteTreeNode(BST->root, BST->root->val);
+		AVLTree->root = deleteTreeNode(AVLTree->root, AVLTree->root->val);
 	}
 }
 
@@ -456,18 +575,18 @@ void printGraph(Graph* g)
 }
 
 // depth first search at some starting node
-void DFS(Graph* g, Stack* dfs, int start)
+void DFS(Graph* g)
 {
 	// flags for wether we have visited a node or not
 	bool visited [CAP];
-	
-	push(dfs, start);
+	Stack dfs = createStack();
+	push(&dfs, 0);
 	printf("DFS Order: ");
 	
-	while(!isEmpty(&dfs->ll))
+	while(!isEmpty(&dfs.ll))
 	{
 		// get position of current node
-		int curr = pop(dfs);
+		int curr = pop(&dfs);
 		printf("%d ", curr);	
 		
 		// get all edges
@@ -477,24 +596,24 @@ void DFS(Graph* g, Stack* dfs, int start)
 			{
 				// say we visited it and add to stack
 				visited[i] = true;
-				push(dfs, i);
+				push(&dfs, i);
 			}
 		}
 	}
 }
 
 // breadth first search at some starting node
-void BFS(Graph* g, Queue* bfs, int start)
+void BFS(Graph* g)
 {
 	// flags for wether we have visited a node or not
 	bool visited [CAP];
-	
-	offer(bfs, start);
+	Queue bfs = createQueue();
+	offer(&bfs, 0);
 	printf("BFS Order: ");
 	
-	while(!isEmpty(&bfs->ll))
+	while(!isEmpty(&bfs.ll))
 	{
-		int curr = poll(bfs);
+		int curr = poll(&bfs);
 		printf("%d ", curr);	
 		
 		// get all edges
@@ -504,7 +623,7 @@ void BFS(Graph* g, Queue* bfs, int start)
 			{
 				// say we visited it and add to stack
 				visited[i] = true;
-				offer(bfs, i);
+				offer(&bfs, i);
 			}
 		}
 	}
@@ -512,26 +631,18 @@ void BFS(Graph* g, Queue* bfs, int start)
 
 int main()
 {
-	// TODO: MAKE BFS AND DFS A VARIABLE IN GRAPH STRUCT
-
 	// ArrayList list = createArrayList();
 	// LinkedList ll = createLinkedList();
 	// Stack st = createStack();
 	// Queue q = createQueue();
-	// BST BST = createTree();
-	// int arr[] = {4, 2, 6, 1, 3, 5, 7};
-	Graph g = createGraph();
-	Stack dfs = createStack();
-	Queue bfs = createQueue();
-	
-	addEdge(&g, 0, 1);
-	addEdge(&g, 0, 2);
-	addEdge(&g, 1, 4);
-	addEdge(&g,4, 6);
+	AVLTree AVLTree = createTree();
+	// Graph g = createGraph();
 
-	BFS(&g, &bfs, 0);
-	printf("\n");
-	DFS(&g, &dfs, 0);
+	// --------------- ADDDING ----------------------//	
+	// addEdge(&g, 0, 1);
+	// addEdge(&g, 0, 2);
+	// addEdge(&g, 1, 4);
+	// addEdge(&g,4, 6);
 
 	for(int i = 0; i < CAP; i++)
 	{
@@ -539,14 +650,23 @@ int main()
 		// addNode(&ll, i);
 		// push(&st, i);
 		// offer(&q, i);
-		// BST.root = addTreeNode(BST.root, arr[i]);
+		AVLTree.root = addTreeNode(AVLTree.root, i);
 	}
+	// --------------- ADDDING ----------------------//	
 
-	// printBST(BST.root);
+	// BFS(&g);
+	// printf("\n");
+	// DFS(&g);
+	// printAVLTree(AVLTree.root);
+
+	// --------------- DEINIT ----------------------//	
+	// printf("%d", AVLTree.root->val);
 	// deleteArrayList(&list);
 	// deleteLinkedList(&ll);
 	// deleteLinkedList(&st.ll);
 	// deleteLinkedList(&q.ll);
-	// deleteBST(&BST); 
+	deleteAVLTree(&AVLTree); 
+	// --------------- DEINIT ----------------------//	
+	
 	return 0;
 }
