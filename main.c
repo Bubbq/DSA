@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
-const int ARRAY_SIZE = 10;
+#include <string.h>
+#define CAP 10
 
 typedef struct
 {
@@ -15,7 +15,7 @@ ArrayList createArrayList()
 {
 	ArrayList list;
 	list.idx = 0;
-	list.cap = sizeof(int) * ARRAY_SIZE;
+	list.cap = sizeof(int) * CAP;
 	list.arr = malloc(list.cap);
 	return list;
 }
@@ -87,8 +87,7 @@ typedef struct
 LinkedList createLinkedList()
 {
 	LinkedList ll;
-	ll.head = malloc(sizeof(Node));
-	ll.tail = ll.head;
+	ll.head = NULL;
 	ll.size = 0;
 	return ll;
 }
@@ -119,19 +118,21 @@ void addFront(LinkedList* ll, int val)
 
 void addNode(LinkedList* ll, int val)
 {
-	if(ll->size == 0)
-	{
-		ll->head->val = val;
-	}
+    if (isEmpty(ll))
+    {
+        ll->head = malloc(sizeof(Node));
+        ll->head->val = val;
+        ll->tail = ll->head;
+    }
 
-	else
-	{
-		ll->tail->next = malloc(sizeof(Node));
-		ll->tail->next->val = val;
-		ll->tail = ll->tail->next;
-	}
+    else
+    {
+        ll->tail->next = malloc(sizeof(Node));
+        ll->tail->next->val = val;
+        ll->tail = ll->tail->next;
+    }
 
-	ll->size++;
+    ll->size++;
 }
 
 void deleteNode(LinkedList* ll, int pos)
@@ -210,6 +211,7 @@ int pop(Stack* st)
 
 	if(!isEmpty(&st->ll))
 	{
+		val = st->ll.head->val;
 		deleteNode(&st->ll, 0);
 	}
 
@@ -398,30 +400,153 @@ void deleteBST(BST* BST)
 	}
 }
 
+typedef struct
+{
+	int edges[CAP][CAP];
+	int in_degree[CAP];
+} Graph;
+
+Graph createGraph()
+{
+	// set all values to 0
+	Graph g;
+	memset(g.edges, 0, sizeof(g.edges));
+	memset(g.in_degree, 0, sizeof(g.in_degree));
+	return g;
+}
+
+void addEdge(Graph* g, int s, int d)
+{
+	if(s > CAP - 1 || d > CAP - 1)
+	{
+		printf("invalid src or dst position \n");
+		return;
+	}
+	
+	// adding the edge
+	g->edges[s][d] = 1;
+	
+	// updating in degree of directed link
+	g->in_degree[d] += 1;
+}
+
+bool checkEdge(Graph* g, int s, int d)
+{
+	if(s > CAP - 1 || d > CAP - 1)
+        {
+        	printf("invalid src or dst position \n");
+                return false;
+        }
+
+	return (g->edges[s][d] == 1);
+}
+
+void printGraph(Graph* g)
+{
+	printf("Nodes\tEdges\n");
+	for(int i = 0; i < CAP; i++)
+	{
+		printf("%d\t", i);
+		for(int j = 0; j < CAP; j++)
+		{
+			printf("%d ", g->edges[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+// depth first search at some starting node
+void DFS(Graph* g, Stack* dfs, int start)
+{
+	// flags for wether we have visited a node or not
+	bool visited [CAP];
+	
+	push(dfs, start);
+	printf("DFS Order: ");
+	
+	while(!isEmpty(&dfs->ll))
+	{
+		// get position of current node
+		int curr = pop(dfs);
+		printf("%d ", curr);	
+		
+		// get all edges
+		for(int i = CAP - 1; i >= 0; i--)
+		{
+			if(g->edges[curr][i] == 1 && !visited[i])
+			{
+				// say we visited it and add to stack
+				visited[i] = true;
+				push(dfs, i);
+			}
+		}
+	}
+}
+
+// breadth first search at some starting node
+void BFS(Graph* g, Queue* bfs, int start)
+{
+	// flags for wether we have visited a node or not
+	bool visited [CAP];
+	
+	offer(bfs, start);
+	printf("BFS Order: ");
+	
+	while(!isEmpty(&bfs->ll))
+	{
+		int curr = poll(bfs);
+		printf("%d ", curr);	
+		
+		// get all edges
+		for(int i = 0; i < CAP; i++)
+		{
+			if(g->edges[curr][i] == 1 && !visited[i])
+			{
+				// say we visited it and add to stack
+				visited[i] = true;
+				offer(bfs, i);
+			}
+		}
+	}
+}
+
 int main()
 {
+	// TODO: MAKE BFS AND DFS A VARIABLE IN GRAPH STRUCT
+
 	// ArrayList list = createArrayList();
 	// LinkedList ll = createLinkedList();
 	// Stack st = createStack();
 	// Queue q = createQueue();
-	BST BST = createTree();
+	// BST BST = createTree();
+	// int arr[] = {4, 2, 6, 1, 3, 5, 7};
+	Graph g = createGraph();
+	Stack dfs = createStack();
+	Queue bfs = createQueue();
+	
+	addEdge(&g, 0, 1);
+	addEdge(&g, 0, 2);
+	addEdge(&g, 1, 4);
+	addEdge(&g,4, 6);
 
-	int arr[] = {4, 2, 6, 1, 3, 5, 7};
+	BFS(&g, &bfs, 0);
+	printf("\n");
+	DFS(&g, &dfs, 0);
 
-	for(int i = 0; i < (sizeof(arr) / sizeof(arr[0])); i++)
+	for(int i = 0; i < CAP; i++)
 	{
 		// add(&list, i);
 		// addNode(&ll, i);
 		// push(&st, i);
 		// offer(&q, i);
-		BST.root = addTreeNode(BST.root, arr[i]);
+		// BST.root = addTreeNode(BST.root, arr[i]);
 	}
 
-	printBST(BST.root);
+	// printBST(BST.root);
 	// deleteArrayList(&list);
 	// deleteLinkedList(&ll);
 	// deleteLinkedList(&st.ll);
-	// deleteLinkedList(&q.ll);	
-	deleteBST(&BST); 
+	// deleteLinkedList(&q.ll);
+	// deleteBST(&BST); 
 	return 0;
 }
