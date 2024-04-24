@@ -122,6 +122,7 @@ void addNode(LinkedList* ll, int val)
     if (isEmpty(ll))
     {
         ll->head = malloc(sizeof(Node));
+		ll->head->next = NULL;
         ll->head->val = val;
         ll->tail = ll->head;
     }
@@ -144,6 +145,12 @@ void deleteNode(LinkedList* ll, int pos)
 		return;
 	}
 	
+	if(isEmpty(ll))
+	{
+		printf("TRYING TO DELETE WITH NO ELEMENTS \n");
+		return;
+	}
+
 	Node* cn = ll->head;
 	Node* prev = NULL;
 
@@ -248,6 +255,12 @@ int peekQueue(Queue* q)
 
 int poll(Queue* q)
 {
+	// if(isEmpty(&q->ll))
+	// {
+	// 	printf("deleting with no elements \n");
+	// 	exit(1);
+	// }
+
 	int val = q->ll.head->val;
 	deleteNode(&q->ll, 0);
 	return val;
@@ -318,6 +331,7 @@ TreeNode* rotateLeft(TreeNode* a)
 	return b;
 }
 
+// case 4 in balance function
 TreeNode* doubleRotateRight(TreeNode* a)
 {
 	a->right = rotateRight(a->right);
@@ -336,7 +350,6 @@ TreeNode* balance(TreeNode* node)
 {
 	if(height(node->left) - height(node->right) > 1)
 	{
-		// case one, left tree is taller than right tree
 		if(height(node->left->left) >= height(node->left->right))
 		{
 			/*
@@ -350,7 +363,6 @@ TreeNode* balance(TreeNode* node)
 			node = rotateRight(node);
 		}
 
-		// case 2: double left
 		else
 		{
 			/*
@@ -367,23 +379,23 @@ TreeNode* balance(TreeNode* node)
 
 	if(height(node->right) - height(node->left) > 1)
 	{
-		//case 3: long right node
 		if(height(node->right->right) >= height(node->right->left))
 		{
 			/*
-				   a               b
-					\             / \
-                     b    -->    a   c
-					  \
-					   c
+			   case 3: long right node
+			   a               b
+				\             / \
+				 b    -->    a   c
+				  \
+				   c
 			*/
 			node = rotateLeft(node);
 		}
 		
-		// case 4: double rotate left
 		else
 		{
 			/*
+				case 4: double rotate left
 				a               a              c
 				 \               \            / \  
 				  b  -->          c   -->    b   a
@@ -519,153 +531,336 @@ void deleteAVLTree(AVLTree* AVLTree)
 	}
 }
 
+
 typedef struct
 {
-	int edges[CAP][CAP];
-	int in_degree[CAP];
+	int val;
+	int in_degree;
+	int out_degree;
+	int weight;
+	// list of adjacent nodes
+	ArrayList an;
+} Vertex;
+typedef struct
+{
+	Vertex nodes[CAP];
 } Graph;
 
 Graph createGraph()
 {
-	// set all values to 0
 	Graph g;
-	memset(g.edges, 0, sizeof(g.edges));
-	memset(g.in_degree, 0, sizeof(g.in_degree));
+	
+	memset(g.nodes, 0, sizeof(g.nodes));
+
+	// instantiate adj nodes
+	for(int i = 0; i < CAP; i++)
+	{
+		g.nodes[i].an = createArrayList();
+	}
+
 	return g;
 }
 
-void addEdge(Graph* g, int s, int d)
+void deleteGraph(Graph* g)
 {
-	if(s > CAP - 1 || d > CAP - 1)
+	for(int i = 0; i < CAP; i++)
+	{
+		deleteArrayList(&g->nodes[i].an);
+	}
+}
+
+// adding edge from node a to b
+void addEdge(Graph* g, int a, int b)
+{
+	if(a > CAP - 1 || b > CAP)
 	{
 		printf("invalid src or dst position \n");
 		return;
 	}
-	
-	// adding the edge
-	g->edges[s][d] = 1;
-	
-	// updating in degree of directed link
-	g->in_degree[d] += 1;
+
+	// checking if node b is alr an adj node to a
+	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	{
+		if(g->nodes[a].an.arr[i] == b)
+		{
+			printf("node b is already in a \n");
+			return;
+		}
+	}
+
+	// create connection
+	add(&g->nodes[a].an, b);
+	g->nodes[a].val = a;
+	g->nodes[b].val = b;
+
+	// update in and out degrees
+	g->nodes[a].out_degree++;
+	g->nodes[b].in_degree++;
 }
 
-bool checkEdge(Graph* g, int s, int d)
+// remove connection from node a to b
+void deleteEdge(Graph* g, int a, int b)
 {
-	if(s > CAP - 1 || d > CAP - 1)
-        {
-        	printf("invalid src or dst position \n");
-                return false;
-        }
+	if(a > CAP - 1 || b > CAP - 1)
+	{
+		printf("INVALID NODE POSITION \n");
+		return;
+	}
 
-	return (g->edges[s][d] == 1);
+	int pos = -1;
+
+	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	{
+		if(g->nodes[a].an.arr[i] == b)
+		{
+			pos = i;
+			delete(&g->nodes[a].an, i);
+			// update in and out degree
+			g->nodes[a].out_degree--;
+			g->nodes[b].in_degree--;
+			g->nodes[b].val = 0;
+		}
+	}
+
+	if(pos < 0)
+	{
+		printf("node %d does not connect to %d \n", a, b);
+		return;
+	}
+}
+
+bool checkEdge(Graph*g,  int a, int b)
+{
+	if(a > CAP - 1 || b > CAP - 1)
+	{
+		printf("invalid src or dst position \n");
+		return false;
+	}
+
+	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	{
+		if(g->nodes[a].an.arr[i] == b)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void printGraph(Graph* g)
 {
-	printf("Nodes\tEdges\n");
-	for(int i = 0; i < CAP; i++)
-	{
-		printf("%d\t", i);
-		for(int j = 0; j < CAP; j++)
+    printf("Nodes\tWeight\tIn-Degree Out-Degree\tEdge(s)\n");
+    for(int i = 0; i < CAP; i++)
+    {
+		if(g->nodes[i].val <= 0)
 		{
-			printf("%d ", g->edges[i][j]);
+			continue;
 		}
-		printf("\n");
-	}
+
+        printf("%d\t%d\t%d\t  %d\t\t", i, g->nodes[i].weight, g->nodes[i].in_degree, g->nodes[i].out_degree);
+        for(int j = 0; j < g->nodes[i].an.idx; j++)
+        {
+            printf("%d ", g->nodes[i].an.arr[j]);
+        }
+		
+        printf("\n");
+    }
 }
 
 // depth first search at some starting node
-void DFS(Graph* g)
+void DFS(Graph* g, int s)
 {
-	// flags for wether we have visited a node or not
-	bool visited [CAP];
-	Stack dfs = createStack();
-	push(&dfs, 0);
-	printf("DFS Order: ");
-	
-	while(!isEmpty(&dfs.ll))
-	{
-		// get position of current node
-		int curr = pop(&dfs);
-		printf("%d ", curr);	
-		
-		// get all edges
-		for(int i = CAP - 1; i >= 0; i--)
+    bool visited[CAP] = {false};
+
+    Stack dfs = createStack();
+    push(&dfs, s);
+    printf("DFS Order: ");
+
+    while (!isEmpty(&dfs.ll))
+    {
+		int cn = pop(&dfs);
+		printf("%d ", cn);
+		for(int i = g->nodes[cn].an.idx - 1; i >= 0; i--)
 		{
-			if(g->edges[curr][i] == 1 && !visited[i])
+			int adjn = g->nodes[cn].an.arr[i];
+			if(!visited[adjn])
 			{
-				// say we visited it and add to stack
-				visited[i] = true;
-				push(&dfs, i);
+				visited[adjn] = true;
+				push(&dfs, adjn);
 			}
 		}
-	}
+    }
 }
 
+
 // breadth first search at some starting node
-void BFS(Graph* g)
+void BFS(Graph* g, int s)
 {
 	// flags for wether we have visited a node or not
-	bool visited [CAP];
+	bool visited [CAP] = {false};
 	Queue bfs = createQueue();
-	offer(&bfs, 0);
+	offer(&bfs, s);
 	printf("BFS Order: ");
 	
 	while(!isEmpty(&bfs.ll))
 	{
-		int curr = poll(&bfs);
-		printf("%d ", curr);	
+		int cn = poll(&bfs);
+		printf("%d ", cn);	
 		
-		// get all edges
-		for(int i = 0; i < CAP; i++)
+		for(int i = 0; i < g->nodes[cn].an.idx; i++)
 		{
-			if(g->edges[curr][i] == 1 && !visited[i])
+			int adjn = g->nodes[cn].an.arr[i];
+			if(!visited[adjn])
 			{
-				// say we visited it and add to stack
-				visited[i] = true;
-				offer(&bfs, i);
+				visited[adjn] = true;
+				offer(&bfs, adjn);
 			}
+		}
+	}
+}
+
+int shortestPath(Graph* g, int a, int b)
+{
+	// flag determining wether we have met these nodes or not, prevents cycling
+	bool visited[CAP] = {false};
+
+	// to hold nodes and their path lengths in BFS order
+	Queue n = createQueue();
+	Queue pl = createQueue();
+
+	// add the starting node a, trying to get to b
+	offer(&n, a);
+	offer(&pl, 0);
+
+	while(!isEmpty(&n.ll))
+	{
+		// get the current nodes and its distance from the src node a
+		int cn = poll(&n);
+		int d = poll(&pl);
+
+		// if we have reached node b, return the shortest length
+		if(cn == b)
+		{
+			printf("the shortest path length from node %d to node %d is %d \n", a, b, d);
+			deleteLinkedList(&n.ll);
+			deleteLinkedList(&pl.ll);
+
+			return d;
+		}
+
+		// if not, add all adj nodes
+		for(int i = 0; i < g->nodes[cn].an.idx; i++)
+		{
+			// if we have an edge and have not prevoisly met this node before, add it to the queue
+			int adjn = g->nodes[cn].an.arr[i];
+			if(!visited[adjn])
+			{
+				visited[adjn] = true;
+				offer(&n, adjn);
+				offer(&pl, d + 1);
+			}
+		}
+	}
+
+	// at this point, there is no possible path from a to b
+	deleteLinkedList(&n.ll);
+	deleteLinkedList(&pl.ll);
+	return -1;
+}
+
+void topologicSort(Graph g)
+{
+	// store every node with in-degree of 0 in a queue
+	Queue q = createQueue();
+	
+	for(int i = 0; i < CAP; i++)
+	{
+		if(g.nodes[i].in_degree == 0 && g.nodes[i].val > 0)
+		{
+			offer(&q, i);
+		}
+	}
+	
+	printf("Topologically Sorted: ");
+	while(!isEmpty(&q.ll))
+	{
+		// get the next node of in-degree 0 and print it
+		int cn = poll(&q);		
+		printf("%d ", cn);
+		
+		// "remove" node by removing all its links
+		for(int i = 0; i < g.nodes[cn].an.idx; i++)
+		{
+			int adjn = g.nodes[cn].an.arr[i];
+			g.nodes[adjn].in_degree--;
+			
+			// add any 0 in-degree nodes, if any
+			if(g.nodes[adjn].in_degree == 0)
+			{
+				offer(&q, adjn);
+			}	
 		}
 	}
 }
 
 int main()
 {
+	// --------------- INIT ----------------------//	
 	// ArrayList list = createArrayList();
 	// LinkedList ll = createLinkedList();
 	// Stack st = createStack();
 	// Queue q = createQueue();
-	AVLTree AVLTree = createTree();
-	// Graph g = createGraph();
+	// AVLTree AVLTree = createTree();
+	Graph g = createGraph();
+	// --------------- INIT ----------------------//	
 
 	// --------------- ADDDING ----------------------//	
-	// addEdge(&g, 0, 1);
-	// addEdge(&g, 0, 2);
-	// addEdge(&g, 1, 4);
-	// addEdge(&g,4, 6);
+	addEdge(&g,1,2);
+	addEdge(&g,1,4);
+	addEdge(&g,1,3);
 
-	for(int i = 0; i < CAP; i++)
-	{
-		// add(&list, i);
-		// addNode(&ll, i);
-		// push(&st, i);
-		// offer(&q, i);
-		AVLTree.root = addTreeNode(AVLTree.root, i);
-	}
+	addEdge(&g,2,4);
+	addEdge(&g,2,5);
+
+	addEdge(&g,3,6);
+	
+	addEdge(&g,4,6);
+	addEdge(&g,4,3);
+	addEdge(&g,4,7);
+
+	addEdge(&g,5,7);
+	addEdge(&g,5,4);
+
+	addEdge(&g,7,6);
+
+	// for(int i = 0; i < CAP; i++)
+	// {
+	// 	add(&list, i);
+	// 	addNode(&ll, i);
+	// 	push(&st, i);
+	// 	offer(&q, i);
+	// 	AVLTree.root = addTreeNode(AVLTree.root, i);
+	// }
 	// --------------- ADDDING ----------------------//	
 
-	// BFS(&g);
-	// printf("\n");
-	// DFS(&g);
+	// --------------- PRINTING ----------------------//
+	// printArrayList(&list);	
+	// printLinkedList(&ll);
 	// printAVLTree(AVLTree.root);
+	printGraph(&g);
+	// shortestPath(&g, 1, 2);
+	// topologicSort(g);
+	// DFS(&g, 1);
+	// --------------- PRINTING ----------------------//	
 
 	// --------------- DEINIT ----------------------//	
-	// printf("%d", AVLTree.root->val);
 	// deleteArrayList(&list);
 	// deleteLinkedList(&ll);
 	// deleteLinkedList(&st.ll);
 	// deleteLinkedList(&q.ll);
-	deleteAVLTree(&AVLTree); 
+	// deleteAVLTree(&AVLTree); 
+	deleteGraph(&g);
 	// --------------- DEINIT ----------------------//	
 	
 	return 0;
