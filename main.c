@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define CAP 10
 
@@ -255,12 +256,6 @@ int peekQueue(Queue* q)
 
 int poll(Queue* q)
 {
-	// if(isEmpty(&q->ll))
-	// {
-	// 	printf("deleting with no elements \n");
-	// 	exit(1);
-	// }
-
 	int val = q->ll.head->val;
 	deleteNode(&q->ll, 0);
 	return val;
@@ -531,25 +526,43 @@ void deleteAVLTree(AVLTree* AVLTree)
 	}
 }
 
+typedef struct
+{
+	int weight;
+	int src;
+	int dst;
+} Edge;
 
 typedef struct
 {
+	Edge* all_edges;
+	int size;
+	int cap;
+} Edges;
+
+typedef struct
+{
+	int dist;
 	int val;
 	int in_degree;
 	int out_degree;
-	int weight;
 	// list of adjacent nodes
 	ArrayList an;
 } Vertex;
+
 typedef struct
 {
 	Vertex nodes[CAP];
+	Edges edge;
 } Graph;
 
 Graph createGraph()
 {
 	Graph g;
-	
+	g.edge.all_edges = malloc(CAP * sizeof(Edge));
+	g.edge.cap = CAP * sizeof(Edge);
+	g.edge.size = 0;
+
 	memset(g.nodes, 0, sizeof(g.nodes));
 
 	// instantiate adj nodes
@@ -567,10 +580,12 @@ void deleteGraph(Graph* g)
 	{
 		deleteArrayList(&g->nodes[i].an);
 	}
+
+	free(g->edge.all_edges);
 }
 
 // adding edge from node a to b
-void addEdge(Graph* g, int a, int b)
+void addEdge(Graph* g, int a, int b, int w)
 {
 	if(a > CAP - 1 || b > CAP)
 	{
@@ -588,7 +603,7 @@ void addEdge(Graph* g, int a, int b)
 		}
 	}
 
-	// create connection
+	// update src vertex's adj nodes
 	add(&g->nodes[a].an, b);
 	g->nodes[a].val = a;
 	g->nodes[b].val = b;
@@ -596,6 +611,15 @@ void addEdge(Graph* g, int a, int b)
 	// update in and out degrees
 	g->nodes[a].out_degree++;
 	g->nodes[b].in_degree++;
+
+	// update graphs edges
+	if(g->edge.size * sizeof(Edge) == g->edge.cap)
+	{
+		g->edge.cap *= 2;
+		g->edge.all_edges = realloc(g->edge.all_edges, g->edge.cap);
+	}
+
+	g->edge.all_edges[g->edge.size++] = (Edge){w, a, b};
 }
 
 // remove connection from node a to b
@@ -609,6 +633,7 @@ void deleteEdge(Graph* g, int a, int b)
 
 	int pos = -1;
 
+	// remove the adjacency
 	for(int i = 0; i < g->nodes[a].an.idx; i++)
 	{
 		if(g->nodes[a].an.arr[i] == b)
@@ -619,6 +644,24 @@ void deleteEdge(Graph* g, int a, int b)
 			g->nodes[a].out_degree--;
 			g->nodes[b].in_degree--;
 			g->nodes[b].val = 0;
+		}
+	}
+
+	// flag to shift elements to the left
+	bool shift = false;
+
+	// remove edge
+	for(int i = 0; i < g->edge.size; i++)
+	{
+		if(g->edge.all_edges[i].src == a && g->edge.all_edges[i].dst == b)
+		{
+			shift = true;
+			g->edge.size--;
+		}
+
+		if(shift)
+		{
+			g->edge.all_edges[i] = g->edge.all_edges[i + 1];
 		}
 	}
 
@@ -650,7 +693,7 @@ bool checkEdge(Graph*g,  int a, int b)
 
 void printGraph(Graph* g)
 {
-    printf("Nodes\tWeight\tIn-Degree Out-Degree\tEdge(s)\n");
+    printf("NODE\tIN\tOUT\tDIST\tEDGE(S)\n");
     for(int i = 0; i < CAP; i++)
     {
 		if(g->nodes[i].val <= 0)
@@ -658,7 +701,7 @@ void printGraph(Graph* g)
 			continue;
 		}
 
-        printf("%d\t%d\t%d\t  %d\t\t", i, g->nodes[i].weight, g->nodes[i].in_degree, g->nodes[i].out_degree);
+        printf("%d\t%d\t%d\t%d\t", i, g->nodes[i].in_degree, g->nodes[i].out_degree, g->nodes[i].dist);
         for(int j = 0; j < g->nodes[i].an.idx; j++)
         {
             printf("%d ", g->nodes[i].an.arr[j]);
@@ -692,7 +735,6 @@ void DFS(Graph* g, int s)
 		}
     }
 }
-
 
 // breadth first search at some starting node
 void BFS(Graph* g, int s)
@@ -769,7 +811,7 @@ int shortestPath(Graph* g, int a, int b)
 	return -1;
 }
 
-void topologicSort(Graph g)
+void topologicalSort(Graph g)
 {
 	// store every node with in-degree of 0 in a queue
 	Queue q = createQueue();
@@ -804,6 +846,64 @@ void topologicSort(Graph g)
 	}
 }
 
+void printEdges(Graph* g)
+{
+	printf("SRC\tDST\tWEIGHT \n");
+	for(int i = 0; i < g->edge.size; i++)
+	{
+		Edge e = g->edge.all_edges[i];
+		printf("%d\t%d\t%d\n", e.src, e.dst, e.weight);
+	}
+}
+
+void shuffleEdges(Edges* edges)
+{
+	srand(time(NULL)); // Seed the random number generator
+    for (int i = edges->size - 1; i >= 0; i--) {
+        int j = rand() % (i + 1); // Generate a random index between 0 and i
+        // Swap arr[i] and arr[j]
+        Edge tmp = edges->all_edges[i];
+        edges->all_edges[i] = edges->all_edges[j];
+        edges->all_edges[j] = tmp;
+    }
+}
+
+void bellmanFord(Graph* g, int start)
+{
+	// set the distance of all nodes to infinity
+	for(int i = 0; i < CAP; i++)
+	{
+		g->nodes[i].dist = 999;
+	}
+
+	// amount of updates relaxing E edges, when this is 0, algorithim is done
+	int changes;
+
+	// for the starting node
+	g->nodes[start].dist = 0;
+	do
+	{
+		changes = 0;
+		// generate random permuation of edges
+		shuffleEdges(&g->edge);
+
+		// relax every edge if possible
+		for(int i = 0; i < g->edge.size; i++)
+		{
+			int src = g->edge.all_edges[i].src;
+			int dst = g->edge.all_edges[i].dst;
+			int w = g->edge.all_edges[i].weight;
+
+			if(g->nodes[src].dist + w < g->nodes[dst].dist)
+			{
+				changes++;
+				g->nodes[dst].dist = g->nodes[src].dist + w;
+			}
+		}
+
+	} while(changes != 0);
+}
+
 int main()
 {
 	// --------------- INIT ----------------------//	
@@ -816,23 +916,23 @@ int main()
 	// --------------- INIT ----------------------//	
 
 	// --------------- ADDDING ----------------------//	
-	addEdge(&g,1,2);
-	addEdge(&g,1,4);
-	addEdge(&g,1,3);
+	addEdge(&g,1,2, 2);
+	addEdge(&g,1,4, 1);
 
-	addEdge(&g,2,4);
-	addEdge(&g,2,5);
+	addEdge(&g,2,4, 3);
+	addEdge(&g,2,5, 10);
 
-	addEdge(&g,3,6);
+	addEdge(&g,3,6, 5);
+	addEdge(&g,3,1, 4);
 	
-	addEdge(&g,4,6);
-	addEdge(&g,4,3);
-	addEdge(&g,4,7);
+	addEdge(&g,4,6, 8);
+	addEdge(&g,4,3, 2);
+	addEdge(&g,4,7, 4);
+	addEdge(&g,4,5, 2);
 
-	addEdge(&g,5,7);
-	addEdge(&g,5,4);
+	addEdge(&g,5,7, 6);
 
-	addEdge(&g,7,6);
+	addEdge(&g,7,6, 1);
 
 	// for(int i = 0; i < CAP; i++)
 	// {
@@ -848,10 +948,8 @@ int main()
 	// printArrayList(&list);	
 	// printLinkedList(&ll);
 	// printAVLTree(AVLTree.root);
+	bellmanFord(&g, 1);
 	printGraph(&g);
-	// shortestPath(&g, 1, 2);
-	// topologicSort(g);
-	// DFS(&g, 1);
 	// --------------- PRINTING ----------------------//	
 
 	// --------------- DEINIT ----------------------//	
@@ -861,7 +959,6 @@ int main()
 	// deleteLinkedList(&q.ll);
 	// deleteAVLTree(&AVLTree); 
 	deleteGraph(&g);
-	// --------------- DEINIT ----------------------//	
-	
 	return 0;
+	// --------------- DEINIT ----------------------//	
 }
