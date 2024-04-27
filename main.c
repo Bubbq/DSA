@@ -3,15 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#define CAP 10
-
-typedef struct
-{
-	int* arr;
-	int idx;
-	size_t cap;
-} ArrayList;
+#include "data_structures.h"
 
 ArrayList createArrayList()
 {
@@ -71,20 +63,6 @@ void printArrayList(ArrayList* list)
 		printf("%d ", list->arr[i]);
 	}
 }
-
-// how to  solve recusive definition in c
-typedef struct node
-{
-    int val;
-    struct node* next;
-} Node; 
-
-typedef struct
-{
-	Node* head;
-	Node* tail;
-	int size;
-} LinkedList;
 
 LinkedList createLinkedList()
 {
@@ -192,11 +170,6 @@ void deleteLinkedList(LinkedList* ll)
 	}
 }
 
-typedef struct
-{
-	LinkedList ll;
-} Stack;
-
 Stack createStack()
 {
 	Stack st;
@@ -232,11 +205,6 @@ int pop(Stack* st)
 	return val;
 }
 
-typedef struct
-{
-	LinkedList ll;
-} Queue;
-
 Queue createQueue()
 {
 	Queue q;
@@ -260,19 +228,6 @@ int poll(Queue* q)
 	deleteNode(&q->ll, 0);
 	return val;
 }
-
-typedef struct tree_node
-{
-	int val;
-	struct tree_node* left;
-	struct tree_node* right;
-	int height;
-} TreeNode;
-
-typedef struct
-{
-	TreeNode* root;
-} AVLTree;
 
 AVLTree createTree()
 {
@@ -506,6 +461,19 @@ TreeNode* deleteTreeNode(TreeNode* root, int val)
 	return balance(root);
 }
 
+int getHeight(TreeNode* root)
+{
+	if(root == NULL)
+	{
+		return 0;
+	}
+
+	int lh = getHeight(root->left);
+	int rh = getHeight(root->right);
+
+	return lh > rh ? lh + 1 : rh + 1;
+}
+
 void printAVLTree(TreeNode* root)
 {
 	if(root == NULL)
@@ -526,36 +494,6 @@ void deleteAVLTree(AVLTree* AVLTree)
 	}
 }
 
-typedef struct
-{
-	int weight;
-	int src;
-	int dst;
-} Edge;
-
-typedef struct
-{
-	Edge* all_edges;
-	int size;
-	int cap;
-} Edges;
-
-typedef struct
-{
-	int dist;
-	int val;
-	int in_degree;
-	int out_degree;
-	// list of adjacent nodes
-	ArrayList an;
-} Vertex;
-
-typedef struct
-{
-	Vertex nodes[CAP];
-	Edges edge;
-} Graph;
-
 Graph createGraph()
 {
 	Graph g;
@@ -568,7 +506,7 @@ Graph createGraph()
 	// instantiate adj nodes
 	for(int i = 0; i < CAP; i++)
 	{
-		g.nodes[i].an = createArrayList();
+		g.nodes[i].adjn = createArrayList();
 	}
 
 	return g;
@@ -578,7 +516,7 @@ void deleteGraph(Graph* g)
 {
 	for(int i = 0; i < CAP; i++)
 	{
-		deleteArrayList(&g->nodes[i].an);
+		deleteArrayList(&g->nodes[i].adjn);
 	}
 
 	free(g->edge.all_edges);
@@ -594,9 +532,9 @@ void addEdge(Graph* g, int a, int b, int w)
 	}
 
 	// checking if node b is alr an adj node to a
-	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	for(int i = 0; i < g->nodes[a].adjn.idx; i++)
 	{
-		if(g->nodes[a].an.arr[i] == b)
+		if(g->nodes[a].adjn.arr[i] == b)
 		{
 			printf("node b is already in a \n");
 			return;
@@ -604,7 +542,7 @@ void addEdge(Graph* g, int a, int b, int w)
 	}
 
 	// update src vertex's adj nodes
-	add(&g->nodes[a].an, b);
+	add(&g->nodes[a].adjn, b);
 	g->nodes[a].val = a;
 	g->nodes[b].val = b;
 
@@ -634,12 +572,12 @@ void deleteEdge(Graph* g, int a, int b)
 	int pos = -1;
 
 	// remove the adjacency
-	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	for(int i = 0; i < g->nodes[a].adjn.idx; i++)
 	{
-		if(g->nodes[a].an.arr[i] == b)
+		if(g->nodes[a].adjn.arr[i] == b)
 		{
 			pos = i;
-			delete(&g->nodes[a].an, i);
+			delete(&g->nodes[a].adjn, i);
 			// update in and out degree
 			g->nodes[a].out_degree--;
 			g->nodes[b].in_degree--;
@@ -680,9 +618,9 @@ bool checkEdge(Graph*g,  int a, int b)
 		return false;
 	}
 
-	for(int i = 0; i < g->nodes[a].an.idx; i++)
+	for(int i = 0; i < g->nodes[a].adjn.idx; i++)
 	{
-		if(g->nodes[a].an.arr[i] == b)
+		if(g->nodes[a].adjn.arr[i] == b)
 		{
 			return true;
 		}
@@ -702,9 +640,9 @@ void printGraph(Graph* g)
 		}
 
         printf("%d\t%d\t%d\t%d\t", i, g->nodes[i].in_degree, g->nodes[i].out_degree, g->nodes[i].dist);
-        for(int j = 0; j < g->nodes[i].an.idx; j++)
+        for(int j = 0; j < g->nodes[i].adjn.idx; j++)
         {
-            printf("%d ", g->nodes[i].an.arr[j]);
+            printf("%d ", g->nodes[i].adjn.arr[j]);
         }
 		
         printf("\n");
@@ -724,9 +662,9 @@ void DFS(Graph* g, int s)
     {
 		int cn = pop(&dfs);
 		printf("%d ", cn);
-		for(int i = g->nodes[cn].an.idx - 1; i >= 0; i--)
+		for(int i = g->nodes[cn].adjn.idx - 1; i >= 0; i--)
 		{
-			int adjn = g->nodes[cn].an.arr[i];
+			int adjn = g->nodes[cn].adjn.arr[i];
 			if(!visited[adjn])
 			{
 				visited[adjn] = true;
@@ -750,9 +688,9 @@ void BFS(Graph* g, int s)
 		int cn = poll(&bfs);
 		printf("%d ", cn);	
 		
-		for(int i = 0; i < g->nodes[cn].an.idx; i++)
+		for(int i = 0; i < g->nodes[cn].adjn.idx; i++)
 		{
-			int adjn = g->nodes[cn].an.arr[i];
+			int adjn = g->nodes[cn].adjn.arr[i];
 			if(!visited[adjn])
 			{
 				visited[adjn] = true;
@@ -792,10 +730,10 @@ int shortestPath(Graph* g, int a, int b)
 		}
 
 		// if not, add all adj nodes
-		for(int i = 0; i < g->nodes[cn].an.idx; i++)
+		for(int i = 0; i < g->nodes[cn].adjn.idx; i++)
 		{
 			// if we have an edge and have not prevoisly met this node before, add it to the queue
-			int adjn = g->nodes[cn].an.arr[i];
+			int adjn = g->nodes[cn].adjn.arr[i];
 			if(!visited[adjn])
 			{
 				visited[adjn] = true;
@@ -832,9 +770,9 @@ void topologicalSort(Graph g)
 		printf("%d ", cn);
 		
 		// "remove" node by removing all its links
-		for(int i = 0; i < g.nodes[cn].an.idx; i++)
+		for(int i = 0; i < g.nodes[cn].adjn.idx; i++)
 		{
-			int adjn = g.nodes[cn].an.arr[i];
+			int adjn = g.nodes[cn].adjn.arr[i];
 			g.nodes[adjn].in_degree--;
 			
 			// add any 0 in-degree nodes, if any
@@ -904,15 +842,133 @@ void bellmanFord(Graph* g, int start)
 	} while(changes != 0);
 }
 
+Heap createHeap()
+{
+	return (Heap){createArrayList()};
+}
+
+void deleteHeap(Heap* heap)
+{
+	deleteArrayList(&heap->elements);
+}
+
+int parent(int cidx)
+{
+	return (cidx - 1) / 2 >= 0 ? (cidx - 1) / 2 : -1; 
+}
+
+int leftChild(Heap* heap, int cidx)
+{
+	return (2 * cidx) + 1 <= heap->elements.idx - 1 ? (2 * cidx) + 1 : -1;
+}
+
+int rightChild(Heap* heap, int cidx)
+{
+	return (2 * cidx) + 2 <= heap->elements.idx - 1 ? (2 * cidx) + 2 : -1;
+}
+
+void heapifyUp(Heap* heap, int start)
+{
+	// while the new element has a parent, if its smaller than it, then swap
+	while(parent(start) != -1 && heap->elements.arr[start] < heap->elements.arr[parent(start)])
+	{
+		int tmp = heap->elements.arr[start];
+		heap->elements.arr[start] = heap->elements.arr[parent(start)];
+		heap->elements.arr[parent(start)] = tmp;
+
+		// update current index
+		start = parent(start);
+	}
+}
+
+void heapifyDown(Heap* heap)
+{
+	int cidx = 0;
+
+	while(leftChild(heap, cidx) != -1)
+	{
+		int lc = leftChild(heap, cidx);
+		int rc = rightChild(heap, cidx);
+		int small = leftChild(heap, cidx);
+
+		// check if right child exists and if its actually smaller than left
+		if(rc != -1)
+		{
+			small = heap->elements.arr[lc] < heap->elements.arr[rc] ? lc : rc;
+		}
+
+		// check if we need to swap
+		if(heap->elements.arr[cidx] <= heap->elements.arr[small])
+		{
+			break;
+		}
+
+		// swap the current element with is smaller child
+		int tmp = heap->elements.arr[cidx];
+		heap->elements.arr[cidx] = heap->elements.arr[small];
+		heap->elements.arr[small] = tmp;
+
+		// update index
+		cidx = small;
+	}
+
+}
+
+void addHeapElement(Heap* heap, int val)
+{
+	add(&heap->elements, val);
+	heapifyUp(heap, heap->elements.idx - 1);
+}
+
+void deleteMin(Heap* heap)
+{
+	if(heap->elements.idx == 0)
+	{
+		printf("REMOVING WITH NO ELEMENTS \n");
+		return;
+	}
+
+	// set root to last element and delete duplicate
+	heap->elements.arr[0] = heap->elements.arr[heap->elements.idx - 1];
+	delete(&heap->elements, heap->elements.idx - 1);
+
+	// adj temp root to correct position
+	heapifyDown(heap);
+}
+
+void deleteHeapElement(Heap* heap, int pos)
+{
+	if(pos < 0 || pos > heap->elements.idx - 1)
+	{
+		printf("INVALID POS \n");
+		return;
+	}
+
+	if(heap->elements.idx == 1)
+	{
+		deleteMin(heap);
+	}
+
+	// make element smallest in heap
+	heap->elements.arr[pos] = heap->elements.arr[0] - 1;
+
+	// move heap to root position
+	heapifyUp(heap, pos);
+
+	// remove psuedo root
+	deleteMin(heap);
+}
+
 int main()
 {
 	// --------------- INIT ----------------------//	
-	// ArrayList list = createArrayList();
-	// LinkedList ll = createLinkedList();
-	// Stack st = createStack();
-	// Queue q = createQueue();
-	// AVLTree AVLTree = createTree();
+	ArrayList list = createArrayList();
+	LinkedList ll = createLinkedList();
+	Stack st = createStack();
+	Queue q = createQueue();
+	AVLTree AVLTree = createTree();
 	Graph g = createGraph();
+	Heap heap = createHeap();
 	// --------------- INIT ----------------------//	
 
 	// --------------- ADDDING ----------------------//	
@@ -934,31 +990,32 @@ int main()
 
 	addEdge(&g,7,6, 1);
 
-	// for(int i = 0; i < CAP; i++)
-	// {
-	// 	add(&list, i);
-	// 	addNode(&ll, i);
-	// 	push(&st, i);
-	// 	offer(&q, i);
-	// 	AVLTree.root = addTreeNode(AVLTree.root, i);
-	// }
+	for(int i = 32; i >= 0; i--)
+	{
+		addHeapElement(&heap, i);
+		add(&list, i);
+		addNode(&ll, i);
+		push(&st, i);
+		offer(&q, i);
+		AVLTree.root = addTreeNode(AVLTree.root, i);
+	}
 	// --------------- ADDDING ----------------------//	
 
 	// --------------- PRINTING ----------------------//
-	// printArrayList(&list);	
+	// printArrayList(&heap.elements);	
 	// printLinkedList(&ll);
 	// printAVLTree(AVLTree.root);
-	bellmanFord(&g, 1);
-	printGraph(&g);
+	// printGraph(&g);
 	// --------------- PRINTING ----------------------//	
 
 	// --------------- DEINIT ----------------------//	
-	// deleteArrayList(&list);
-	// deleteLinkedList(&ll);
-	// deleteLinkedList(&st.ll);
-	// deleteLinkedList(&q.ll);
-	// deleteAVLTree(&AVLTree); 
+	deleteArrayList(&list);
+	deleteLinkedList(&ll);
+	deleteLinkedList(&st.ll);
+	deleteLinkedList(&q.ll);
+	deleteAVLTree(&AVLTree); 
 	deleteGraph(&g);
+	deleteHeap(&heap);
 	return 0;
 	// --------------- DEINIT ----------------------//	
 }
