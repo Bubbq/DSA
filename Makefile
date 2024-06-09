@@ -1,5 +1,5 @@
 all:
-	gcc main.c -o run -Wall -pedantic 
+	gcc structures.c -o run -Wall -pedantic 
 clean:
 	rm run
 	clear
