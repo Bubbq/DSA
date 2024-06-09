@@ -24,7 +24,7 @@ void deleteElement(ArrayList* al, int p)
 {
     if((p < 0) || (p > al->size)) 
     {
-        printf("invalid delete pition\n");
+        printf("invalid delete position\n");
         return;
     }
 
