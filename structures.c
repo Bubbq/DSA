@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #define CAP 10
+#define AL = sizeof(int * CAP)
 
 typedef struct
 {
@@ -23,11 +24,7 @@ void deleteArrayList(ArrayList* al)
 
 void deleteElement(ArrayList* al, int p)
 {
-    if((p < 0) || (p > al->size)) 
-    {
-        printf("invalid delete position\n");
-        return;
-    }
+    if((p < 0) || (p > al->size)) return;
 
     else 
     {
@@ -79,12 +76,7 @@ LinkedList createLinkedList()
 
 void deleteLinkedList(LinkedList* ll)
 {
-    while(ll->head != NULL)
-    {
-        Node* prev = ll->head;
-        ll->head = ll->head->next;
-        free(prev);
-    }
+    for(Node* prev = NULL; ll->head != NULL; prev = ll->head, ll->head = ll->head->next, free(prev));
 }
 
 bool isEmpty(LinkedList ll)
@@ -92,7 +84,7 @@ bool isEmpty(LinkedList ll)
     return (ll.size == 0);
 }
 
-void print(LinkedList ll)
+void printLinkedList(LinkedList ll)
 {
     for(; ll.head != NULL; ll.head = ll.head->next) printf("%d ", ll.head->val);
 }
@@ -123,18 +115,8 @@ void addBack(LinkedList* ll, int val)
 
 void deleteNode(LinkedList* ll, int pos)
 {
-    if((pos < 0) || (pos > ll->size))
-    {
-        printf("invalid delete position\n");
-        return;
-    }
-
-    else if(isEmpty(*ll))
-    {
-        printf("invalid number of nodes to delete\n");
-        return;
-    }
-
+    if((pos < 0) || (pos > ll->size)) return;
+    else if(isEmpty(*ll)) return;
     else
     { 
         Node* prev = NULL;
@@ -192,11 +174,7 @@ void push(Stack* st, int val)
 
 int pop(Stack* st)
 {
-    if(isEmpty(st->elements))
-    {
-        printf("no elements to delete\n");
-        exit(1);
-    }
+    if(isEmpty(st->elements)) return -1;
 
     int ret = st->elements.head->val;
     deleteNode(&st->elements, 0);
@@ -225,11 +203,7 @@ void offer(Queue* q, int val)
 
 int poll(Queue* q)
 {
-    if(isEmpty(q->elements))
-    {
-        printf("no elements to delete\n");
-        exit(1);
-    }
+    if(isEmpty(q->elements)) return -1;
 
     else
     {
@@ -239,12 +213,238 @@ int poll(Queue* q)
     }
 }
 
+typedef struct tree_node
+{
+	int val;
+	int height;
+	struct tree_node* left;
+	struct tree_node* right;
+} TreeNode;
+
+TreeNode* createTreeNode(int val)
+{
+    TreeNode* tn = malloc(sizeof(TreeNode));
+    *tn = (TreeNode){val, 0, NULL, NULL};
+    return tn;
+}
+
+typedef struct
+{
+	TreeNode* root;
+} AVLTree;
+
+AVLTree createAVLTree()
+{
+    return (AVLTree){NULL};
+}
+
+int height(TreeNode* node)
+{
+	return node == NULL ? -1 : node->height;
+}
+
+int getHeight(TreeNode* root)
+{
+	if(root == NULL) return 0;
+
+	int lh = getHeight(root->left);
+	int rh = getHeight(root->right);
+
+	return (lh > rh) ? ++lh : ++rh;
+}
+
+TreeNode* rotateRight(TreeNode* a)
+{		
+	TreeNode* b = a->left;
+
+	// whatevers on the right of b put it on the left of a as b is smaller than a
+	a->left = b->right;
+
+	// make b become parent of a
+	b->right = a;
+
+	// get the new, updated heights
+	a->height = height(a->right) > height(a->left) ? height(a->right) + 1 : height(a->left) + 1;
+
+	// use a bc a is now right child of b
+	b->height = height(b->left) > height(a) ? height(b->left) + 1 : height(a) + 1;
+
+	// b is the new head
+	return b;
+}
+
+TreeNode* rotateLeft(TreeNode* a)
+{
+	TreeNode* b = a->right;
+	
+	// save the content from b left
+	a->right = b->left;
+
+	// make b the parent
+	b->left = a;
+
+	// update the height
+	a->height = (height(a->left) > height(a->right)) ? height(a->left) + 1: height(a->right) + 1;
+
+	b->height = (height(a) > height(b->right)) ? height(a) + 1 : height(b->right) + 1;
+
+	return b;
+}
+
+TreeNode* doubleRotateRight(TreeNode* a)
+{
+	a->right = rotateRight(a->right);
+	return rotateLeft(a);
+}
+
+TreeNode* doubleRotateLeft(TreeNode* a)
+{
+	a->left = rotateLeft(a->left);
+	return rotateRight(a);
+}
+
+TreeNode* balance(TreeNode* node)
+{
+	if(height(node->left) - height(node->right) > 1)
+	{
+		if(height(node->left->left) >= height(node->left->right)) node = rotateRight(node);
+			/*
+				case 1: long left node
+					 a            b
+					/            / \
+				   b   -->      c   a
+	              /
+				 c
+			*/
+		else node = doubleRotateLeft(node);
+			/*
+				case 2: double left
+				  a              a             c
+				 /              /             / \  
+				b     -->      c      -->    b   a
+				 \            /                 
+				  c          b                 
+			*/
+	}
+
+	if(height(node->right) - height(node->left) > 1)
+	{
+		if(height(node->right->right) >= height(node->right->left)) node = rotateLeft(node);
+			/*
+			   case 3: long right node
+			   a               b
+				\             / \
+				 b    -->    a   c
+				  \
+				   c
+			*/
+		else node = doubleRotateLeft(node);
+			/*
+				case 4: double rotate left
+				a               a              c
+				 \               \            / \  
+				  b  -->          c   -->    b   a
+				 /                 \           
+				 c                  b        
+			*/
+	}
+
+	// update root height
+	node->height = (height(node->left) > height(node->right)) ? height(node->left) + 1: height(node->right) + 1;
+	return node;
+}
+
+TreeNode* addTreeNode(TreeNode* root, int val)
+{
+	// base case, finding position of new node or tree is empty
+	if(root == NULL) return createTreeNode(val);
+
+	// recursivley find the correct pos of the passed value
+	if(root->val < val) root->right = addTreeNode(root->right, val);
+	else if(root->val > val) root->left = addTreeNode(root->left, val);
+
+    // balance the nodes at each traversal
+    return balance(root);
+}
+
+TreeNode* sucessor(TreeNode* root)
+{
+	TreeNode* tn = root->right;
+	while(tn->left != NULL) tn = tn->left;
+	return tn;
+}
+
+TreeNode* deleteTreeNode(TreeNode* root, int val)
+{
+	// the value does not exist in the tree
+	if(root == NULL) return NULL;
+
+    // finding the node
+	if(root->val > val) root->left = deleteTreeNode(root->left, val);
+	else if(root->val < val) root->right = deleteTreeNode(root->right, val);
+
+	// found the node to delete
+	else
+	{
+        bool hl = (root->left != NULL);
+        bool hr = (root->right != NULL);
+		
+        // case 1: no children
+		if(!hr && !hl) {free(root);return NULL;}
+
+		// case 2: right child
+		else if(hr && !hl)
+		{
+			TreeNode* tn = root->right;
+			free(root);
+			return tn;
+		}
+
+		// case 3: left child
+		else if(hl && !hr)
+		{
+			TreeNode* tn = root->left;
+			free(root);
+			return tn;
+		}
+
+        // case 4: 2 children, return smallest node in right subtree
+		else
+		{
+			TreeNode* tn = sucessor(root);
+
+			// replace delNodes value
+			root->val = tn->val;
+
+			// delete duplicate, is either a child of right node or is right node itself
+			root->right = deleteTreeNode(root->right, tn->val);
+		}
+	}
+
+	return balance(root);
+}
+
+void printAVLTree(TreeNode* root)
+{
+	if(root == NULL) return;
+
+	printAVLTree(root->left);
+	printf("Node: %d  Height: %d\n", root->val, root->height);
+	printAVLTree(root->right);
+}
+
+void deleteAVLTree(AVLTree* AVLTree)
+{
+	while(AVLTree->root != NULL) AVLTree->root = deleteTreeNode(AVLTree->root, AVLTree->root->val);
+}
+
 int main()
 {
     ArrayList al = createArrayList();
     LinkedList ll = createLinkedList();
     Stack st = createStack();
     Queue q = createQueue();
+    AVLTree avl = createAVLTree();
 
     for(int i = 0; i < CAP; i++)
     {
@@ -252,11 +452,17 @@ int main()
         addBack(&ll, i);
         push(&st, i);
         offer(&q, i);
+        avl.root = addTreeNode(avl.root, i);
     }
+
+    printArrayList(&al);
+    printLinkedList(ll);
+    printAVLTree(avl.root);
 
     deleteQueue(&q);
     deleteArrayList(&al);
     deleteLinkedList(&ll);
     deleteStack(&st);
+    deleteAVLTree(&avl);
     return 0;
 }
