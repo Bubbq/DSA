@@ -12,25 +12,19 @@ typedef struct
 	size_t cap;
 } ArrayList;
 
-ArrayList createArrayList()
-{
-    return (ArrayList){malloc(CAP * sizeof(int)), 0, sizeof(int) * CAP};
-}
+ArrayList createArrayList(){ return (ArrayList){malloc(sizeof(int)), 0, sizeof(int)}; }
 
-void deleteArrayList(ArrayList* al)
-{
-    free(al->list);
-}
+void deleteArrayList(ArrayList* alloc_al_mem){ free(alloc_al_mem->list); }
 
 void deleteElement(ArrayList* al, int p)
 {
-    if((p < 0) || (p > al->size)) return;
+    // out of bounds error checking
+	if((p < 0) || (p > al->size)) return;
 
-    else 
-    {
-        for(int i = p; i < al->size - 1; i++) al->list[i] = al->list[i + 1];
-        al->size--;
-    }
+	// shift every element to the left once
+	for(int i = p; i < al->size - 1; i++) al->list[i] = al->list[i + 1];
+	
+	al->size--;
 }
 
 void resize(ArrayList* al)
@@ -45,10 +39,8 @@ void addElement(ArrayList* al, int n)
     al->list[al->size++] = n;
 }
 
-void printArrayList(ArrayList* al)
-{
-    for(int i = 0; i < al->size; i++) printf("%d ", al->list[i]);
-}
+void printArrayList(ArrayList* al) { for(int i = 0; i < al->size; i++) printf("%d ", al->list[i]); }
+
 typedef struct node
 {
     int val;
@@ -69,30 +61,18 @@ typedef struct
 	Node* tail;
 } LinkedList;
 
-LinkedList createLinkedList()
-{
-    return (LinkedList){0, NULL, NULL};
-}
+LinkedList createLinkedList() { return (LinkedList){0, NULL, NULL}; }
 
-void deleteLinkedList(LinkedList* ll)
-{
-    for(Node* prev = NULL; ll->head != NULL; prev = ll->head, ll->head = ll->head->next, free(prev));
-}
+void deleteLinkedList(LinkedList* ll){ for(Node* prev = NULL; ll->head != NULL; prev = ll->head, ll->head = ll->head->next, free(prev)); }
 
-bool isEmpty(LinkedList ll)
-{
-    return (ll.size == 0);
-}
+bool isEmpty(LinkedList ll){ return (ll.size == 0); }
 
-void printLinkedList(LinkedList ll)
-{
-    for(; ll.head != NULL; ll.head = ll.head->next) printf("%d ", ll.head->val);
-}
+void printLinkedList(LinkedList ll) { for(; ll.head != NULL; ll.head = ll.head->next) printf("%d ", ll.head->val); }
 
 void addFront(LinkedList* ll, int val)
 {
-    Node* nh = createNode(val, ll->head);
-    ll->head = nh;
+	// update the address of the head node to a node pointing to the old one
+    ll->head = createNode(val, ll->head);
     ll->size++;
 }
 
@@ -115,15 +95,21 @@ void addBack(LinkedList* ll, int val)
 
 void deleteNode(LinkedList* ll, int pos)
 {
-    if((pos < 0) || (pos > ll->size)) return;
-    else if(isEmpty(*ll)) return;
-    else
+    // out of bounds error check
+	if((pos < 0) || (pos > ll->size)) return;
+    
+	// empty list error check
+	else if(isEmpty(*ll)) return;
+    
+	else
     { 
         Node* prev = NULL;
         Node* cn = ll->head;
 
+		// traverse the ll until we hit the node to delete
         for(int i = 0; i < pos; i++, prev = cn, cn = cn->next);
 
+		// deleting the root
         if(prev == NULL) 
         {
             prev = ll->head;
@@ -146,39 +132,28 @@ typedef struct
 	LinkedList elements;
 } Stack;
 
-Stack createStack()
-{
-    return (Stack){createLinkedList()};
-}
+Stack createStack(){ return (Stack){createLinkedList()}; }
 
-void deleteStack(Stack* st)
-{
-    deleteLinkedList(&st->elements);
-}
+void deleteStack(Stack* st) { deleteLinkedList(&st->elements); }
 
 int peek(Stack* st)
 {
-    if(isEmpty(st->elements))
-    {
-        printf("no elements to return\n");
-        exit(1);
-    }
-
-    return st->elements.head->val;
+    if(isEmpty(st->elements)) return -1;
+    else return st->elements.head->val;
 }
 
-void push(Stack* st, int val)
-{
-    addFront(&st->elements, val);
-}
+void push(Stack* st, int val) { addFront(&st->elements, val );}
 
 int pop(Stack* st)
 {
     if(isEmpty(st->elements)) return -1;
 
-    int ret = st->elements.head->val;
-    deleteNode(&st->elements, 0);
-    return ret;
+    else
+    {
+        int ret = st->elements.head->val;
+        deleteNode(&st->elements, 0);
+        return ret;
+    }
 }
 
 typedef struct
@@ -186,20 +161,11 @@ typedef struct
 	LinkedList elements;
 } Queue;
 
-Queue createQueue()
-{
-    return (Queue){createLinkedList()};
-}
+Queue createQueue(){ return (Queue){createLinkedList()}; }
 
-void deleteQueue(Queue* q)
-{
-    deleteLinkedList(&q->elements);
-}
+void deleteQueue(Queue* q) { deleteLinkedList(&q->elements); }
 
-void offer(Queue* q, int val)
-{
-    addBack(&q->elements, val);
-}
+void offer(Queue* q, int val){ addBack(&q->elements, val); }
 
 int poll(Queue* q)
 {
@@ -438,31 +404,138 @@ void deleteAVLTree(AVLTree* AVLTree)
 	while(AVLTree->root != NULL) AVLTree->root = deleteTreeNode(AVLTree->root, AVLTree->root->val);
 }
 
+typedef struct
+{
+	ArrayList elements;
+} Heap;
+
+Heap createHeap() { return (Heap){createArrayList()}; }
+
+void deleteHeap(Heap* heap) { deleteArrayList(&heap->elements); }
+
+// the parent pos of the ith element is i - 1 / 2
+int parentPos(int pos) { return (pos - 1) / 2 >= 0 ? (pos - 1) / 2 : -1; }
+
+// the left child of the ith element is (2 * i) + 1
+int leftChildPos(Heap* heap, int cidx){ return (2 * cidx) + 1 <= heap->elements.size - 1 ? (2 * cidx) + 1 : -1; }
+
+// the right child pos of ith element is (2 * i) + 2
+int rightChildPos(Heap* heap, int cidx) { return (2 * cidx) + 2 <= heap->elements.size - 1 ? (2 * cidx) + 2 : -1; }
+
+void swap(int* i, int* j)
+{
+	int tmp = *i;
+	*i = *j;
+	*j = tmp;
+}
+
+void heapifyUp(Heap* heap, int pos)
+{
+	// while the current element has a parent and is smaller, continue to swap the two
+	while(parentPos(pos) != -1 && heap->elements.list[pos] < heap->elements.list[parentPos(pos)])
+	{
+		swap(&heap->elements.list[pos], &heap->elements.list[parentPos(pos)]);
+		
+		// update current index
+		pos = parentPos(pos);
+	}
+}
+
+void heapifyDown(Heap* heap)
+{
+	int cidx = 0;
+
+	while(leftChildPos(heap, cidx) != -1)
+	{
+		int lc = leftChildPos(heap, cidx);
+		int rc = rightChildPos(heap, cidx);
+		
+		// position of smaller child value 
+		int sp;
+
+		// check if right child exists and if its actually smaller than left
+		if(rc == -1) sp = lc;
+		else sp = (heap->elements.list[lc] < heap->elements.list[rc]) ? lc : rc;
+
+		// check if we need to swap
+		if(heap->elements.list[cidx] <= heap->elements.list[sp]) break;
+
+		swap(&heap->elements.list[cidx], &heap->elements.list[sp]);
+
+		// update index
+		cidx = sp;
+	}
+}
+
+void addHeapElement(Heap* heap, int val)
+{
+	addElement(&heap->elements, val);
+	heapifyUp(heap, (heap->elements.size - 1));
+}
+
+void deleteMin(Heap* heap)
+{
+	if(heap->elements.size == 0) return;
+
+	// set root to last element and delete duplicate
+	heap->elements.list[0] = heap->elements.list[(heap->elements.size - 1)];
+	deleteElement(&heap->elements, (heap->elements.size - 1));
+
+	// adj temp root to correct position
+	heapifyDown(heap);
+}
+
+void deleteHeapElement(Heap* heap, int pos)
+{
+	// out of bounds error check
+	if(pos < 0 || (pos > heap->elements.size - 1)) return;
+
+	// make element smallest in heap
+	heap->elements.list[pos] = heap->elements.list[0] - 1;
+
+	// move heap to root position
+	heapifyUp(heap, pos);
+
+	// remove psuedo root
+	deleteMin(heap);
+}
+
+void printHeap(Heap* heap) { printArrayList(&heap->elements); }
+
 int main()
 {
-    ArrayList al = createArrayList();
-    LinkedList ll = createLinkedList();
-    Stack st = createStack();
-    Queue q = createQueue();
-    AVLTree avl = createAVLTree();
+	// -----------INIT-----------------
+	// ArrayList al = createArrayList();
+    // LinkedList ll = createLinkedList();
+    // Stack st = createStack();
+    // Queue q = createQueue();
+    // AVLTree avl = createAVLTree();
+	Heap heap = createHeap();
 
-    for(int i = 0; i < CAP; i++)
+	// ----------ADDING-------------
+    for(int i = 0; i < 7; i++)
     {
-        addElement(&al, i);
-        addBack(&ll, i);
-        push(&st, i);
-        offer(&q, i);
-        avl.root = addTreeNode(avl.root, i);
-    }
+        // addElement(&al, i);
+        // addBack(&ll, i);
+        // push(&st, i);
+        // offer(&q, i);
+        // avl.root = addTreeNode(avl.root, i);
+		addHeapElement(&heap, i);
+	}
 
-    printArrayList(&al);
-    printLinkedList(ll);
-    printAVLTree(avl.root);
+	// ----------PRINTING-------------
+    // printArrayList(&al);
+    // printLinkedList(ll);
+    // printAVLTree(avl.root);
+	printHeap(&heap);
+	
 
-    deleteQueue(&q);
-    deleteArrayList(&al);
-    deleteLinkedList(&ll);
-    deleteStack(&st);
-    deleteAVLTree(&avl);
+	// ----------DELLAOCATION---------
+    // deleteQueue(&q);
+    // deleteArrayList(&al);
+    // deleteLinkedList(&ll);
+    // deleteStack(&st);
+    // deleteAVLTree(&avl);
+	deleteHeap(&heap);
     return 0;
 }
